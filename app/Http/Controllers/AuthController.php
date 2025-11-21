@@ -109,21 +109,22 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'required',
             'phone' => 'required|unique:users',
-            'password' => 'required|min:6'
+            'password' => 'required|min:6',
+            'department' => 'required'
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
-            'phone' => $validated['phone'] ,
+            'phone' => $validated['phone'],
             'password' => bcrypt($validated['password']),
             'role' => 'employee',
+            'department' => $validated['department'],
         ]);
 
         $user->save();
 
         return response()->json([
             'message' => 'Account Created Successfully',
-            'employee' => $user,
         ]);
     }
 
