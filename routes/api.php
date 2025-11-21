@@ -17,10 +17,34 @@ use App\Http\Controllers\API\ComplaintController;
 |
 */
 
+Route::get('/test-role', function () {
+    return 'Works!';
+})->middleware('role:admin');
+
+
 // AUTH ROUTES
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/employeeLogin', [AuthController::class, 'employeeLogin']);
+
+
+Route::middleware(['auth:sanctum','role:admin'])->group(function () {
+
+    Route::post('createAccount', [AuthController::class, 'createAccount']);
+
+});
+
+Route::middleware(['auth:sanctum','role:employee'])->group(function () {
+
+
+});
+
+Route::middleware(['auth:sanctum','role:citizen'])->group(function () {
+
+
+});
+
 
 // PROTECTED ROUTES (ONLY FOR LOGGED USERS)
 Route::middleware('auth:sanctum')->group(function () {

@@ -99,9 +99,54 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'token' => $token,
+            'role' => $user->role,
             'user' => $user
         ]);
     }
 
+
+    public function createAccount(Request $request){
+        $validated = $request->validate([
+            'name' => 'required',
+            'phone' => 'required|unique:users',
+            'password' => 'required|min:6'
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'] ,
+            'password' => bcrypt($validated['password']),
+            'role' => 'employee',
+        ]);
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Account Created Successfully',
+            'employee' => $user,
+        ]);
+    }
+
+    public function employeeLogin(Request $request){
+        $request->validate([
+            'phone' => 'required',
+            'password' => 'required|min:6'
+        ]);
+
+        $user = User::where('phone', $request->phone)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        $token = $user->createToken('employee_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successful',
+            'token' => $token,
+            'role' => $user->role,
+            'user' => $user
+        ]);
+    }
 
 }
