@@ -43,6 +43,11 @@ class User extends Authenticatable
         'otp_code',
     ];
 
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class, 'userID');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

@@ -9,21 +9,20 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up()
-{
-    Schema::create('complaints', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('user_id'); // صاحب الشكوى
-        $table->string('title');
-        $table->text('description');
-        $table->string('status')->default('new'); // new, in_progress, completed, rejected
-        $table->string('department')->nullable(); // الجهة المسؤولة
-        $table->string('reference_number')->unique();
-        $table->timestamps();
+   public function up() {
+        Schema::create('complaints', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('userID');
+            $table->foreign('userID')->references('id')->on('users')->onDelete('cascade');
+            $table->string('type');
+            $table->enum('department', ['Interior','Health','Education','Justice','AntiCorruption','Communications','Labor','ConsumerProtection']);
+            $table->string('location');
+            $table->text('description');
+            $table->enum('status',['new', 'inProgress', 'completed', 'rejected'])->default('new');
+            $table->timestamps();
 
-        $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-    });
-}
+        });
+    }
 
 
     /**

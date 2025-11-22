@@ -12,24 +12,53 @@ use Illuminate\Support\Str;
 class ComplaintController extends Controller
 {
     // تقديم شكوى جديدة (مواطن)
-    public function store(Request $request)
+    public function addComplaint(Request $request)
     {
+        $user = Auth::user();
+
         $request->validate([
-            'title' => 'required|string|max:255',
+            'type' => 'required|string',
             'description' => 'required|string',
-            'department' => 'required|string',
+            'department' => 'required|in:Interior, Health, Education, Justice, AntiCorruption, Communications, Labor, ConsumerProtection',
+            'location' => 'required|string',
         ]);
 
         $complaint = Complaint::create([
-            'user_id' => $user = Auth::user(),
-            'title' => $request->title,
+            'user_id' => $user->id,
+            'type' => $request->type,
             'description' => $request->description,
             'department' => $request->department,
-            'reference_number' => Str::uuid(),
+            'location' => $request->location,
         ]);
+        $complaint->save();
 
-        return response()->json($complaint, 201);
+
+        return response()->json([
+            'message' => 'Complaint Created Successfully',
+            'complaint' => $complaint
+        ], 201);
+
     }
+
+    public function getComplaintsCitizen(){
+        $user = Auth::user();
+        $complaints = Complaint::where('userID', $user->id)->get();
+
+        return response()->json([
+            'message' => 'All Complaints for user',
+            'complaints' => $complaints
+        ]);
+    }
+
+    public function getOneComplaint($id)
+    {
+        $complaint = Complaint::findOrFail($id);
+
+        return response()->json([
+            'complaint' => $complaint
+        ]);
+    }
+
 
     // عرض الشكاوى حسب نوع المستخدم
     public function index()

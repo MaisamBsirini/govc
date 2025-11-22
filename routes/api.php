@@ -29,19 +29,22 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/employeeLogin', [AuthController::class, 'employeeLogin']);
 
 
-Route::middleware(['auth:sanctum','role:admin'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('getOneComplaint', [ComplaintController::class, 'getOneComplaint']);
+});
 
+Route::middleware(['auth:sanctum','role:admin'])->group(function () {
     Route::post('createAccount', [AuthController::class, 'createAccount']);
 
 });
 
 Route::middleware(['auth:sanctum','role:employee'])->group(function () {
 
-
 });
 
 Route::middleware(['auth:sanctum','role:citizen'])->group(function () {
-
+    Route::post('addComplaint', [ComplaintController::class, 'addComplaint']);
+    Route::get('getComplaintsCitizen', [ComplaintController::class, 'getComplaintsCitizen']);
 
 });
 

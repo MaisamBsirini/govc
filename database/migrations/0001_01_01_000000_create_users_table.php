@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('otp_code')->nullable();
             $table->timestamp('otp_expires_at')->nullable();
             $table->boolean('is_verified')->default(false);
-            $table->string('department')->nullable();
+            $table->enum('department', ['Interior','Health','Education','Justice','AntiCorruption','Communications','Labor','ConsumerProtection']);
             $table->rememberToken();
             $table->timestamps();
 
