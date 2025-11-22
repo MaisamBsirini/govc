@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Complaint extends Model
 {
@@ -16,12 +17,13 @@ class Complaint extends Model
     ];
 
 
-    public function ComplaintsPhoto(): HasMany
+    public function photos(): HasMany
     {
-        return $this->hasMany(ComplaintsPhoto::class, 'complaintID');
+        return $this->hasMany(ComplaintsPhoto::class, 'complaintID', 'id');
     }
 
-    public function ComplaintsNote(): HasMany
+
+    public function notes(): HasMany
     {
         return $this->hasMany(ComplaintsNote::class, 'complaintID');
     }

@@ -3,8 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\API\ComplaintController;
-
+use App\Http\Controllers\ComplaintController;
 
 
 /*
@@ -30,32 +29,23 @@ Route::post('/employeeLogin', [AuthController::class, 'employeeLogin']);
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('getOneComplaint', [ComplaintController::class, 'getOneComplaint']);
+    Route::get('getOneComplaint/{id}', [ComplaintController::class, 'getOneComplaint']);
 });
 
 Route::middleware(['auth:sanctum','role:admin'])->group(function () {
     Route::post('createAccount', [AuthController::class, 'createAccount']);
-
+    Route::get('getAllComplaints', [ComplaintController::class, 'getAllComplaints']);
+    Route::get('getUsers', [ComplaintController::class, 'getUsers']);
 });
 
 Route::middleware(['auth:sanctum','role:employee'])->group(function () {
-
+    Route::get('getComplaintsEmployee', [ComplaintController::class, 'getComplaintsEmployee']);
+    Route::post('updateStatusAddNote/{id}', [ComplaintController::class, 'updateStatus']);
 });
 
 Route::middleware(['auth:sanctum','role:citizen'])->group(function () {
     Route::post('addComplaint', [ComplaintController::class, 'addComplaint']);
     Route::get('getComplaintsCitizen', [ComplaintController::class, 'getComplaintsCitizen']);
-
-});
-
-
-// PROTECTED ROUTES (ONLY FOR LOGGED USERS)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/complaints', [ComplaintController::class, 'index']);
-    Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
-    Route::post('/complaints', [ComplaintController::class, 'store']);
-    Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
-    Route::post('/complaints/{id}/note', [ComplaintController::class, 'addNote']);
 });
 
 

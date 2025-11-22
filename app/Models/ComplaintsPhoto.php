@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\belongsTo;
 
 class ComplaintsPhoto extends Model
 {
     protected $fillable = [
-        'ComplaintID',
+        'complaintID',
         'photo',
     ];
 

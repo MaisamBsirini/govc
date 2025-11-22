@@ -1,44 +1,80 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use App\Models\User;
 use App\Models\Complaint;
-use App\Models\ComplaintNote;
-use Illuminate\Support\Str;
+use App\Models\ComplaintsNote;
+use App\Models\ComplaintsPhoto;
 
 class ComplaintController extends Controller
 {
-    // تقديم شكوى جديدة (مواطن)
+    // _____________ Citizen _______________
+
     public function addComplaint(Request $request)
     {
         $user = Auth::user();
 
-        $request->validate([
+        $validated = $request->validate([
             'type' => 'required|string',
             'description' => 'required|string',
-            'department' => 'required|in:Interior, Health, Education, Justice, AntiCorruption, Communications, Labor, ConsumerProtection',
+            'department' => 'required|in:Interior,Health,Education,Justice,AntiCorruption,Communications,Labor,ConsumerProtection',
             'location' => 'required|string',
+            'photos' => 'nullable',
+            'photos.*' => 'image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
         $complaint = Complaint::create([
-            'user_id' => $user->id,
-            'type' => $request->type,
-            'description' => $request->description,
-            'department' => $request->department,
-            'location' => $request->location,
+            'userID' => $user->id,
+            'type' => $validated['type'],
+            'description' => $validated['description'],
+            'department' => $validated['department'],
+            'location' => $validated['location'],
+            'status' => 'new'
         ]);
-        $complaint->save();
 
+        $photoUrls = [];
+
+        if ($request->hasFile('photos')) {
+            $photos = $request->file('photos');
+
+            if (!is_array($photos)) {
+                $photos = [$photos];
+            }
+
+            foreach ($photos as $photo) {
+                $path = $photo->store('complaints_photos', 'public');
+
+                ComplaintsPhoto::create([
+                    'complaintID' => $complaint->id,
+                    'photo' => $path,
+                ]);
+
+                $photoUrls[] = asset('storage/' . $path);
+            }
+        }
 
         return response()->json([
             'message' => 'Complaint Created Successfully',
-            'complaint' => $complaint
+            'complaint' => [
+                'id' => $complaint->id,
+                'userID' => $complaint->userID,
+                'type' => $complaint->type,
+                'description' => $complaint->description,
+                'department' => $complaint->department,
+                'location' => $complaint->location,
+                'status' => $complaint->status,
+                'photos' => $photoUrls,
+                'created_at' => $complaint->created_at,
+                'updated_at' => $complaint->updated_at,
+            ],
         ], 201);
-
     }
+
+
 
     public function getComplaintsCitizen(){
         $user = Auth::user();
@@ -50,96 +86,90 @@ class ComplaintController extends Controller
         ]);
     }
 
-    public function getOneComplaint($id)
-    {
-        $complaint = Complaint::findOrFail($id);
+    public function getOneComplaint($id) {
+        $complaint = Complaint::where('id',$id)->with(['photos', 'notes'])->get();
 
         return response()->json([
+            'complaint' => $complaint
+        ]);
+
+    }
+
+
+
+    // ____________ Employee ______________
+
+    public function getComplaintsEmployee() {
+        $user = Auth::user();
+
+        $department = $user->department;
+
+        $complaints = Complaint::where('department', $department)->with(['photos', 'notes'])->get();
+
+        return response()->json([
+            'department' => $department,
+            'count' => $complaints->count(),
+            'complaints' => $complaints
+        ], 200);
+
+    }
+
+
+    public function updateStatus(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'status' => 'nullable|string|in:new,inProgress,completed,rejected',
+            'note'   => 'nullable|string',
+        ]);
+
+        $complaint = Complaint::findOrFail($id);
+
+        // Update status if provided
+        if ($request->filled('status')) {
+            $complaint->status = $request->status;
+            $complaint->save();
+        }
+
+        // Add note if provided
+        if ($request->filled('note')) {
+            ComplaintsNote::create([
+                'complaintID' => $complaint->id,
+                'note' => $request->note,
+            ]);
+        }
+
+        // Load updated notes
+        $complaint->load('notes');
+
+        return response()->json([
+            'message' => 'Complaint updated successfully',
             'complaint' => $complaint
         ]);
     }
 
 
-    // عرض الشكاوى حسب نوع المستخدم
-    public function index()
-    {
-        $user = Auth::user();
+    //_____________ Admin ________________
 
-        if ($user->role === 'citizen') {
-            $complaints = Complaint::where('user_id', $user->id)->get();
-        } elseif ($user->role === 'department') {
-            $complaints = Complaint::where('department', $user->department)->get();
-        } elseif ($user->role === 'admin') {
-            $complaints = Complaint::all();
-        } else {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+    public function getAllComplaints(){
+        $complaints = Complaint::with(['photos', 'notes'])->get();
 
-        return response()->json($complaints);
-    }
-
-    // عرض شكوى واحدة
-    public function show($id)
-    {
-        $complaint = Complaint::findOrFail($id);
-        $user = Auth::user();
-
-        // التحكم بالوصول
-        if ($user->role === 'citizen' && $complaint->user_id !== $user->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        if ($user->role === 'department' && $complaint->department !== $user->department) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        return response()->json($complaint);
-    }
-
-    // الجهة الحكومية تغير حالة الشكوى
-    public function updateStatus(Request $request, $id)
-    {
-        $user = Auth::user();
-
-        if ($user->role !== 'department' && $user->role !== 'admin') {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $request->validate([
-            'status' => 'required|string|in:new,in_progress,completed,rejected',
+        return response()->json([
+            'message' => 'All Complaints',
+            'complaint' => $complaints
         ]);
-
-        $complaint = Complaint::findOrFail($id);
-
-        if ($user->role === 'department' && $complaint->department !== $user->department) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $complaint->status = $request->status;
-        $complaint->save();
-
-        return response()->json(['message' => 'Status updated', 'complaint' => $complaint]);
     }
 
-    // إضافة ملاحظة على الشكوى
-    public function addNote(Request $request, $id)
-    {
-        $user = Auth::user();
+    public function getUsers(){
+        $citizens = User::where('role', 'citizen')->get();
+        $employees = User::where('role', 'employee')->get();
 
-        if ($user->role !== 'department' && $user->role !== 'admin') {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $request->validate(['note' => 'required|string']);
-
-        $complaint = Complaint::findOrFail($id);
-
-        ComplaintNote::create([
-            'complaint_id' => $complaint->id,
-            'user_id' => $user->id,
-            'note' => $request->note,
+        return response()->json([
+            'message' => 'All users',
+            'citizens' => $citizens,
+            'employees' => $employees
         ]);
-
-        return response()->json(['message' => 'Note added successfully']);
     }
+
 }

@@ -110,7 +110,7 @@ class AuthController extends Controller
             'name' => 'required',
             'phone' => 'required|unique:users',
             'password' => 'required|min:6',
-            'department' => 'required|in:Interior, Health, Education, Justice, AntiCorruption, Communications, Labor, ConsumerProtection',
+            'department' => 'required|in:Interior,Health,Education,Justice,AntiCorruption,Communications,Labor,ConsumerProtection',
         ]);
 
         $user = User::create([
