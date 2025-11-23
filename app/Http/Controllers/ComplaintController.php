@@ -10,8 +10,19 @@ use App\Models\Complaint;
 use App\Models\ComplaintsNote;
 use App\Models\ComplaintsPhoto;
 
+use App\DAO\ComplaintDAO;
+
+
 class ComplaintController extends Controller
 {
+    protected $dao;
+
+    public function __construct(ComplaintDAO $dao)
+    {
+        $this->dao = $dao;
+    }
+
+
     // _____________ Citizen _______________
 
     public function addComplaint(Request $request)
@@ -27,7 +38,7 @@ class ComplaintController extends Controller
             'photos.*' => 'image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $complaint = Complaint::create([
+        $complaint = $this->dao->createComplaint([                     // DAO Called
             'userID' => $user->id,
             'type' => $validated['type'],
             'description' => $validated['description'],
@@ -48,10 +59,7 @@ class ComplaintController extends Controller
             foreach ($photos as $photo) {
                 $path = $photo->store('complaints_photos', 'public');
 
-                ComplaintsPhoto::create([
-                    'complaintID' => $complaint->id,
-                    'photo' => $path,
-                ]);
+                $this->dao->addPhoto($complaint->id, $path);                // DAO Called
 
                 $photoUrls[] = asset('storage/' . $path);
             }
@@ -74,11 +82,9 @@ class ComplaintController extends Controller
         ], 201);
     }
 
-
-
     public function getComplaintsCitizen(){
         $user = Auth::user();
-        $complaints = Complaint::where('userID', $user->id)->get();
+        $complaints = $this->dao->getComplaintsForCitizen($user->id);
 
         return response()->json([
             'message' => 'All Complaints for user',
@@ -87,12 +93,11 @@ class ComplaintController extends Controller
     }
 
     public function getOneComplaint($id) {
-        $complaint = Complaint::where('id',$id)->with(['photos', 'notes'])->get();
+        $complaint = $this->dao->getComplaintById($id);
 
         return response()->json([
             'complaint' => $complaint
         ]);
-
     }
 
 
@@ -104,7 +109,7 @@ class ComplaintController extends Controller
 
         $department = $user->department;
 
-        $complaints = Complaint::where('department', $department)->with(['photos', 'notes'])->get();
+        $complaints = $this->dao->getComplaintsForEmployee($department);
 
         return response()->json([
             'department' => $department,
@@ -124,28 +129,27 @@ class ComplaintController extends Controller
             'note'   => 'nullable|string',
         ]);
 
-        $complaint = Complaint::findOrFail($id);
-
-        // Update status if provided
+        // Update status through DAO
         if ($request->filled('status')) {
-            $complaint->status = $request->status;
-            $complaint->save();
+            $complaint = $this->dao->updateStatus($id, $request->status);
+        } else {
+            $complaint = $this->dao->getComplaintById($id);
         }
 
-        // Add note if provided
+
+
+        // Add note through DAO
         if ($request->filled('note')) {
-            ComplaintsNote::create([
-                'complaintID' => $complaint->id,
-                'note' => $request->note,
-            ]);
+            $this->dao->addNote($id, $request->note);
         }
 
-        // Load updated notes
-        $complaint->load('notes');
+        // Reload updated complaint with notes
+        $updated = $this->dao->getComplaintById($id);
+
 
         return response()->json([
             'message' => 'Complaint updated successfully',
-            'complaint' => $complaint
+            'complaint' => $updated
         ]);
     }
 
@@ -153,7 +157,7 @@ class ComplaintController extends Controller
     //_____________ Admin ________________
 
     public function getAllComplaints(){
-        $complaints = Complaint::with(['photos', 'notes'])->get();
+        $complaints = $this->dao->getAllComplaints();
 
         return response()->json([
             'message' => 'All Complaints',
@@ -162,8 +166,8 @@ class ComplaintController extends Controller
     }
 
     public function getUsers(){
-        $citizens = User::where('role', 'citizen')->get();
-        $employees = User::where('role', 'employee')->get();
+        $citizens = $this->dao->getCitizens();
+        $employees = $this->dao->getEmployees();
 
         return response()->json([
             'message' => 'All users',

@@ -28,4 +28,6 @@ class Complaint extends Model
         return $this->hasMany(ComplaintsNote::class, 'complaintID');
     }
 
+
+
 }
