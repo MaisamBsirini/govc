@@ -41,6 +41,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Account created, please check your email for OTP.',
+            'email' => $user->email,
         ]);
 
     }
