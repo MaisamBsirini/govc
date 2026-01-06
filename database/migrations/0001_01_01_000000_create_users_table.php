@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique()->nullable();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('phone')->unique()->nullable();
             $table->string('password');
             $table->enum('role', ['admin','employee','citizen']);
@@ -22,6 +23,7 @@ return new class extends Migration
             $table->timestamp('otp_expires_at')->nullable();
             $table->boolean('is_verified')->default(false);
             $table->enum('department', ['Interior','Health','Education','Justice','AntiCorruption','Communications','Labor','ConsumerProtection']);
+            $table->string('fcm_token')->nullable();
             $table->rememberToken();
             $table->timestamps();
 

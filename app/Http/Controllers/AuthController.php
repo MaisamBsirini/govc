@@ -72,6 +72,7 @@ class AuthController extends Controller
             'otp_code' => null,
             'otp_expires_at' => null,
             'is_verified' => true,
+            'fcm_token' => $request->fcm_token,
         ]);
 
         return response()->json(['message' => 'Account verified successfully']);

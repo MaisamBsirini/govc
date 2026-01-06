@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+
+        $middleware->alias([
+            'log.requests' => \App\Http\Middleware\LogRequests::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

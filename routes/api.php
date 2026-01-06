@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ComplaintController;
 
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -20,32 +19,32 @@ Route::get('/test-role', function () {
     return 'Works!';
 })->middleware('role:admin');
 
-
-// AUTH ROUTES
+// ---------------- AUTH ROUTES ----------------
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/verifyOtp', [AuthController::class, 'verifyOtp']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/employeeLogin', [AuthController::class, 'employeeLogin']);
 
-
+// ---------------- Routes عامة للمستخدمين المسجلين ----------------
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('getOneComplaint/{id}', [ComplaintController::class, 'getOneComplaint']);
 });
 
-Route::middleware(['auth:sanctum','role:admin'])->group(function () {
+// ---------------- Routes للـ Admin ----------------
+Route::middleware(['auth:sanctum','role:admin','log.requests'])->group(function () {
     Route::post('createAccount', [AuthController::class, 'createAccount']);
     Route::get('getAllComplaints', [ComplaintController::class, 'getAllComplaints']);
     Route::get('getUsers', [ComplaintController::class, 'getUsers']);
 });
 
-Route::middleware(['auth:sanctum','role:employee'])->group(function () {
+// ---------------- Routes للـ Employee ----------------
+Route::middleware(['auth:sanctum','role:employee','log.requests'])->group(function () {
     Route::get('getComplaintsEmployee', [ComplaintController::class, 'getComplaintsEmployee']);
     Route::post('updateStatusAddNote/{id}', [ComplaintController::class, 'updateStatus']);
 });
 
-Route::middleware(['auth:sanctum','role:citizen'])->group(function () {
+// ---------------- Routes للـ Citizen ----------------
+Route::middleware(['auth:sanctum','role:citizen','log.requests'])->group(function () {
     Route::post('addComplaint', [ComplaintController::class, 'addComplaint']);
     Route::get('getComplaintsCitizen', [ComplaintController::class, 'getComplaintsCitizen']);
 });
-
-
