@@ -18,6 +18,8 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            direction: rtl;
+            text-align: right;
         }
         th, td {
             border: 1px solid #999;
