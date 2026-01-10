@@ -9,15 +9,16 @@ use Illuminate\Support\Facades\Auth;
 
 class RoleMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle($request, Closure $next, ...$roles)
+    public function handle(Request $request, Closure $next, ...$roles)
     {
-        if (!Auth::check() || !in_array(Auth::user()->role, $roles)) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        $user = $request->user(); // ✅ THIS IS IMPORTANT
+
+        if (!$user) {
+            return response()->json(['message' => 'Not logged in'], 401);
+        }
+
+        if (!in_array($user->role, $roles)) {
+            return response()->json(['message' => 'No permission'], 403);
         }
 
         return $next($request);

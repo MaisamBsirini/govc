@@ -15,9 +15,10 @@ use App\Http\Controllers\ComplaintController;
 |
 */
 
-Route::get('/test-role', function () {
-    return 'Works!';
-})->middleware('role:admin');
+Route::middleware(['auth:sanctum', 'role:admin'])->get('/test', function () {
+    return 'OK';
+});
+
 
 // ---------------- AUTH ROUTES ----------------
 Route::post('/register', [AuthController::class, 'register']);
@@ -35,6 +36,7 @@ Route::middleware(['auth:sanctum','role:admin','log.requests'])->group(function 
     Route::post('createAccount', [AuthController::class, 'createAccount']);
     Route::get('getAllComplaints', [ComplaintController::class, 'getAllComplaints']);
     Route::get('getUsers', [ComplaintController::class, 'getUsers']);
+    Route::delete('deleteAccount/{userID}', [AuthController::class, 'deleteAccount']);
 });
 
 // ---------------- Routes للـ Employee ----------------

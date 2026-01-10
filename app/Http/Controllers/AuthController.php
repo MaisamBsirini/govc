@@ -152,4 +152,18 @@ class AuthController extends Controller
         ]);
     }
 
+
+    public function deleteAccount($userID)
+    {
+        $user = User::where('id', $userID)->get()->first();
+
+        $user->tokens()->delete();
+
+        $user->delete();
+
+        return response()->json([
+            'message' => 'Account deleted successfully'
+        ], 200);
+    }
+
 }
