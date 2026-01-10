@@ -78,33 +78,76 @@ class AuthController extends Controller
         return response()->json(['message' => 'Account verified successfully']);
     }
 
+public function login(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'password' => 'required'
+    ]);
 
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
+    $user = User::where('email', $request->email)->first();
 
-        $user = User::where('email', $request->email)->first();
+    // تسجيل محاولة فاشلة
+    if (!$user || !Hash::check($request->password, $user->password)) {
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        // زيادة عداد المحاولات
+        $attempts = cache()->increment("login_attempts_{$request->email}");
+
+        // تحقق إذا تجاوزت 5 محاولات لأول مرة
+        $lockNotified = cache()->get("lock_notified_{$request->email}", false);
+
+        if ($attempts >= 5 && $user && !$lockNotified) {
+            // قفل الحساب مؤقتاً
+            $user->update(['locked_until' => now()->addMinutes(15)]);
+
+            // تخزين الإشعار في قاعدة البيانات
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'title' => 'محاولة دخول فاشلة',
+                'body' => 'تم قفل حسابك مؤقتاً بسبب عدد محاولات تسجيل الدخول الفاشلة.',
+                'data' => ['email' => $request->email, 'type' => 'login_failure'],
+            ]);
+
+            // إرسال إشعار عبر Firebase
+            $firebase = new \App\Services\FirebaseService();
+            $firebase->sendNotification(
+                $user->fcm_token,
+                'محاولة دخول فاشلة',
+                'تم قفل حسابك مؤقتاً بسبب عدد محاولات تسجيل الدخول الفاشلة.'
+            );
+
+            // علامة لمنع إعادة الإشعار
+            cache()->put("lock_notified_{$request->email}", true, now()->addMinutes(15));
         }
 
-        if (!$user->is_verified) {
-            return response()->json(['message' => 'Please verify your account'], 403);
-        }
-
-        $token = $user->createToken('mobile_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login successful',
-            'token' => $token,
-            'role' => $user->role,
-            'user' => $user
-        ]);
+        return response()->json(['message' => 'Invalid credentials'], 401);
     }
+
+    // تحقق من القفل
+    if ($user->locked_until && now()->lessThan($user->locked_until)) {
+        return response()->json([
+            'message' => "تم قفل الحساب مؤقتاً. حاول لاحقاً بعد " . $user->locked_until->diffForHumans()
+        ], 423);
+    }
+
+    // إعادة تعيين العد عند تسجيل الدخول الناجح
+    cache()->forget("login_attempts_{$request->email}");
+    cache()->forget("lock_notified_{$request->email}");
+
+    if (!$user->is_verified) {
+        return response()->json(['message' => 'Please verify your account'], 403);
+    }
+
+    $token = $user->createToken('mobile_token')->plainTextToken;
+
+    return response()->json([
+        'message' => 'Login successful',
+        'token' => $token,
+        'role' => $user->role,
+        'user' => $user
+    ]);
+}
+
 
 
     public function createAccount(Request $request){

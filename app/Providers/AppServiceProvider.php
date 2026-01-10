@@ -10,37 +10,39 @@ use App\Models\Complaint;
 use App\Observers\ComplaintObserver;
 use App\Events\ComplaintUpdated;
 use App\Listeners\SendComplaintNotification;
+use App\Services\ReportService; // ✅ نضيف الـ Service هنا
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
+    public function register(): void
+    {
+        // تسجيل الـ Repository
+        $this->app->bind(
+            ComplaintRepositoryInterface::class,
+            ComplaintRepository::class
+        );
 
-
-public function register(): void
-{
-    $this->app->bind(
-        ComplaintRepositoryInterface::class,
-        ComplaintRepository::class
-    );
-}
-
+        // تسجيل الـ Service (اختياري لكن يضمن الحقن)
+        $this->app->singleton(ReportService::class, function ($app) {
+            return new ReportService();
+        });
+    }
 
     /**
      * Bootstrap any application services.
      */
+    public function boot(): void
+    {
+        // Observer للشكاوي
+        Complaint::observe(ComplaintObserver::class);
 
-
-public function boot(): void
-{
-    Complaint::observe(ComplaintObserver::class);
-
-    Event::listen(
+        // Listener للحدث
+        Event::listen(
             ComplaintUpdated::class,
             [SendComplaintNotification::class, 'handle']
         );
-}
-
-
+    }
 }

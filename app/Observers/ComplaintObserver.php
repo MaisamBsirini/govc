@@ -4,6 +4,7 @@ namespace App\Observers;
 use App\Models\Complaint;
 use App\Services\FirebaseService;
 use Illuminate\Support\Facades\Log;
+use App\Models\Version;
 
 class ComplaintObserver
 {
@@ -16,7 +17,16 @@ class ComplaintObserver
 
     public function updated(Complaint $complaint)
     {
-        // 1️⃣ تسجيل التعديل
+        $this->logAndVersion($complaint, 'update');
+         if ($complaint->user && $complaint->user->fcm_token) {
+        $this->firebase->sendNotification(
+            $complaint->user->fcm_token,
+            'تحديث الشكوى',
+            "تم تعديل حالتك إلى: {$complaint->status}",
+            ['complaint_id' => $complaint->id]
+        );
+    }
+        //  تسجيل التعديل
         Log::info("User updated Complaint ID {$complaint->id}", [
             'status' => $complaint->status,
             'updated_at' => $complaint->updated_at,
